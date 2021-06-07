@@ -226,6 +226,15 @@ $RemoteScriptBlock = {
         $ForceASLR
     )
 
+    #######################################
+    ######### Compatibility Stuff #########
+    #######################################
+    Function IsRecentVersion
+    {
+        $OSVersion = [System.Environment]::OSVersion.Version
+        return $OSVersion.Major -ge 10 -And $OSVersion.Build -ge 18362
+    }
+
     ###################################
     ##########  Win32 Stuff  ##########
     ###################################
@@ -999,7 +1008,13 @@ $RemoteScriptBlock = {
         $UnsafeNativeMethods = $SystemAssembly.GetType('Microsoft.Win32.UnsafeNativeMethods')
         # Get a reference to the GetModuleHandle and GetProcAddress methods
         $GetModuleHandle = $UnsafeNativeMethods.GetMethod('GetModuleHandle')
-        $GetProcAddress = $UnsafeNativeMethods.GetMethod('GetProcAddress')
+
+        if (IsRecentVersion) {
+            $GetProcAddress = $UnsafeNativeMethods.GetMethod('GetProcAddress', [reflection.bindingflags] "Public,Static", $null, 
+            [System.Reflection.CallingConventions]::Any, @((New-Object System.Runtime.InteropServices.HandleRef).GetType(), [string]), $null)
+        } else {
+            $GetProcAddress = $UnsafeNativeMethods.GetMethod('GetProcAddress')
+        }
         # Get a handle to the module specified
         $Kern32Handle = $GetModuleHandle.Invoke($null, @($Module))
         $tmpPtr = New-Object IntPtr
